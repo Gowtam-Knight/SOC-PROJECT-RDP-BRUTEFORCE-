@@ -1,0 +1,29 @@
+========================================================================================
+                      SOC LAB ARCHITECTURE: RDP BRUTE FORCE & DETECTION PIPELINE
+========================================================================================
+
+    +--------------------------+                      +-------------------------------+
+    |       ATTACKER VM        |                      |       TARGET VICTIM VM        |
+    |   OS: Kali Linux         |                      |   OS: Windows Server / Win 10 |
+    |   IP: 192.168.10.50      |                      |   IP: 192.168.10.100          |
+    +--------------------------+                      +-------------------------------+
+    | - Nmap (Reconnaissance)  |                      | - Service: RDP (TCP/3389)     |
+    | - Hydra (Brute Force)    |  TCP Port 3389 (RDP) | - Auditing: Logon Events      |
+    | - Crowbar / xfreerdp     |====================> | - Agent: Splunk Universal Fwd |
+    +--------------------------+                      +-------------------------------+
+                                                                      |
+                                                                      | Forwarding
+                                                                      | WinEventLog:Security
+                                                                      | TCP Port 9997
+                                                                      V
+                                                      +-------------------------------+
+                                                      |        SIEM SERVER VM         |
+                                                      |   OS: Ubuntu / Linux / Win    |
+                                                      |   IP: 192.168.10.10           |
+                                                      +-------------------------------+
+                                                      | - Splunk Enterprise (Indexer) |
+                                                      | - Web UI: http://192.168.10.10:8000
+                                                      | - SPL Search & Alert Engine   |
+                                                      | - SOC Monitoring Dashboards   |
+                                                      +-------------------------------+
+========================================================================================

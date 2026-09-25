@@ -1,0 +1,33 @@
+title: Potential Remote Desktop (RDP) Brute Force Attack
+id: 5d6f4b6d-74d1-4b19-bf39-2b0e9f1a2389
+status: production
+description: Detects a high volume of failed logon attempts via Remote Desktop Protocol (RDP) Logon Type 10 within a short timeframe from a single source IP address.
+references:
+    - https://attack.mitre.org/techniques/T1110/001/
+    - https://attack.mitre.org/techniques/T1021/001/
+author: SOC Analyst Portfolio Investigation
+date: 2026-09-25
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4625
+        LogonType: 10
+    timeframe: 5m
+    condition: selection | count() by IpAddress > 10
+fields:
+    - TargetUserName
+    - WorkstationName
+    - IpAddress
+    - SubStatus
+    - LogonType
+falsepositives:
+    - Users with automated batch scripts attempting obsolete passwords
+    - Misconfigured internal administrative monitoring utilities
+level: high
+tags:
+    - attack.credential_access
+    - attack.t1110.001
+    - attack.lateral_movement
+    - attack.t1021.001
