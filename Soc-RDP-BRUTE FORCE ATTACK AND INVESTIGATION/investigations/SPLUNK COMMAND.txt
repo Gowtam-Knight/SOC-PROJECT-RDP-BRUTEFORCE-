@@ -1,0 +1,79 @@
+1. RDP failed logins — Event 4625
+index=soc-windows EventCode=4625
+| table _time host Account_Name Source_Network_Address Logon_Type Failure_Reason
+| sort -_time
+2. RDP successful logins — Event 4624
+index=soc-windows EventCode=4624 Logon_Type=10
+| table _time host Account_Name Source_Network_Address Logon_Type
+| sort -_time
+3. RDP brute-force detection
+index=soc-windows EventCode=4625
+| bin _time span=5m
+| stats count as Failed_Attempts
+        dc(Account_Name) as Unique_Accounts
+        values(Account_Name) as Accounts
+        by _time Source_Network_Address
+| where Failed_Attempts >= 5
+| sort - Failed_Attempts
+4. Failed attempts by source IP
+index=soc-windows EventCode=4625
+| stats count as Failed_Attempts
+        dc(Account_Name) as Unique_Accounts
+        values(Account_Name) as Accounts
+        by Source_Network_Address
+| sort - Failed_Attempts
+5. Failed attempts by account
+index=soc-windows EventCode=4625
+| stats count as Failed_Attempts
+        by Account_Name
+| sort - Failed_Attempts
+6. Failed → successful login correlation
+index=soc-windows (EventCode=4625 OR EventCode=4624)
+| stats count(eval(EventCode=4625)) as Failures
+        count(eval(EventCode=4624)) as Successes
+        by Source_Network_Address Account_Name
+| where Failures > 0 AND Successes > 0
+| sort - Failures
+7. RDP authentication timeline
+index=soc-windows (EventCode=4624 OR EventCode=4625)
+| eval Status=if(EventCode=4624,"Success","Failure")
+| table _time Status Account_Name Source_Network_Address Logon_Type
+| sort _time
+8. RDP logon type 10
+index=soc-windows (EventCode=4624 OR EventCode=4625) Logon_Type=10
+| stats count by EventCode Account_Name Source_Network_Address
+| sort -count
+9. Top attacking IPs
+index=soc-windows EventCode=4625
+| stats count as Attempts by Source_Network_Address
+| sort - Attempts
+| head 10
+10. Unique accounts targeted
+index=soc-windows EventCode=4625
+| stats dc(Account_Name) as Unique_Accounts
+        values(Account_Name) as Accounts
+        by Source_Network_Address
+| sort - Unique_Accounts
+11. Event-code overview
+index=soc-windows
+| stats count by EventCode
+| sort - count
+12. RDP brute-force time chart
+index=soc-windows EventCode=4625
+| timechart span=5m count as Failed_Attempts
+13. Failed vs successful RDP
+index=soc-windows (EventCode=4625 OR EventCode=4624)
+| eval Status=case(
+    EventCode=4625,"Failed",
+    EventCode=4624,"Successful"
+)
+| timechart span=5m count by Status
+14. Detect 5+ failures from one IP
+index=soc-windows EventCode=4625
+| stats count as Failed_Attempts by Source_Network_Address
+| where Failed_Attempts >= 5
+| sort - Failed_Attempts
+15. Detailed investigation table
+index=soc-windows EventCode=4625
+| table _time host Account_Name Source_Network_Address Logon_Type Failure_Reason Status
+| sort -_time

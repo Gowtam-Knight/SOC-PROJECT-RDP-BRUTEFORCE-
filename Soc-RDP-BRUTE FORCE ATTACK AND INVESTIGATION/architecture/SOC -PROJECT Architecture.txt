@@ -1,0 +1,185 @@
+Architecture
+
+The project uses a **centralized SOC monitoring architecture where Windows endpoint telemetry is collected using the Splunk Universal Forwarder and Sysmon, then sent to Splunk running on Kali Linux for detection, correlation, visualization, and investigation.
+
+Architecture Diagram
+
+```text
+                         ┌──────────────────────────┐
+                         │       SOC ANALYST        │
+                         │                          │
+                         │  Investigate Alerts      │
+                         │  Analyze Events          │
+                         │  Monitor Dashboard       │
+                         └────────────┬─────────────┘
+                                      │
+                                      ▼
+                         ┌──────────────────────────┐
+                         │    SPLUNK WEB UI         │
+                         │      Port: 8000          │
+                         │                          │
+                         │  SOC Dashboard           │
+                         │  Detection Queries       │
+                         │  Event Investigation    │
+                         └────────────┬─────────────┘
+                                      │
+                                      ▼
+                         ┌──────────────────────────┐
+                         │    SPLUNK ENTERPRISE     │
+                         │      Kali Linux          │
+                         │                          │
+                         │  Index: soc-windows      │
+                         │  SPL / Detection         │
+                         │  Correlation             │
+                         │  Visualization           │
+                         └────────────┬─────────────┘
+                                      │
+                           Receiving Port: 9997
+                                      │
+                                      ▼
+                 ┌────────────────────────────────────┐
+                 │       SPLUNK UNIVERSAL FORWARDER   │
+                 │             Windows Endpoint       │
+                 │                                    │
+                 │  Collects Windows Event Logs       │
+                 │  Forwards Security Telemetry       │
+                 └───────────────┬────────────────────┘
+                                 │
+                 ┌───────────────┴────────────────┐
+                 │                                │
+                 ▼                                ▼
+      ┌─────────────────────┐          ┌─────────────────────┐
+      │ Windows Security    │          │       Sysmon        │
+      │ Event Logs          │          │                     │
+      │                     │          │ Process Creation    │
+      │ 4624 - Logon        │          │ Network Connection  │
+      │ 4625 - Failed Logon │          │ Process Termination │
+      │ 4672 - Privileges   │          │ DNS / Other Events  │
+      │ 4648 - Credentials  │          │                     │
+      │ 4634 - Logoff       │          │ Event ID 1 / 3 etc. │
+      │ 4798 / 4799         │          └─────────────────────┘
+      │ 5379               │
+      └─────────────────────┘
+```
+
+### Data Flow
+
+```text
+Windows Endpoint
+       │
+       ▼
+Windows Event Logs + Sysmon
+       │
+       ▼
+Splunk Universal Forwarder
+       │
+       │ TCP 9997
+       ▼
+Splunk Enterprise
+       │
+       ▼
+soc-windows Index
+       │
+       ▼
+SPL Detection Queries
+       │
+       ▼
+Dashboards / Investigation
+       │
+       ▼
+SOC Analyst
+```
+
+### Components
+
+| Component                      | Role                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------- |
+| **Windows Endpoint**           | Generates authentication, security, and system activity                   |
+| **Sysmon**                     | Provides detailed endpoint telemetry such as process and network activity |
+| **Splunk Universal Forwarder** | Collects and forwards Windows logs                                        |
+| **Kali Linux**                 | Hosts the Splunk Enterprise SIEM in the lab                               |
+| **Splunk Enterprise**          | Central log collection, search, detection, correlation, and visualization |
+| **SPL**                        | Used to query and analyze security events                                 |
+| **SOC Dashboard**              | Provides visual monitoring and investigation panels                       |
+| **SOC Analyst**                | Reviews events, correlates activity, and investigates suspicious behavior |
+
+### Network Architecture
+
+```text
+┌──────────────────────┐
+│   Windows Endpoint   │
+│                      │
+│   IP: 192.168.93.142 │
+│                      │
+│  Sysmon              │
+│  Security Logs       │
+│  Application Logs    │
+│  System Logs         │
+└──────────┬───────────┘
+           │
+           │ TCP 9997
+           │
+           ▼
+┌──────────────────────┐
+│     Kali Linux       │
+│                      │
+│   IP: 192.168.93.131 │
+│                      │
+│  Splunk Enterprise   │
+│  SIEM                │
+└──────────┬───────────┘
+           │
+           │ HTTP/HTTPS
+           │
+           ▼
+┌──────────────────────┐
+│    Splunk Web UI     │
+│      Port 8000       │
+│                      │
+│  SOC Dashboard       │
+└──────────────────────┘
+```
+
+### Detection Pipeline
+
+```text
+                    DATA COLLECTION
+                          │
+                          ▼
+              Windows + Sysmon Events
+                          │
+                          ▼
+                  LOG FORWARDING
+                          │
+                          ▼
+                Splunk Universal
+                   Forwarder
+                          │
+                          ▼
+                   SIEM INGESTION
+                          │
+                          ▼
+                  soc-windows Index
+                          │
+                          ▼
+                     DETECTION
+                          │
+             ┌────────────┼────────────┐
+             ▼            ▼            ▼
+          4625          4624        Sysmon 1
+       Failed RDP     RDP Login     Process
+             │            │            │
+             └────────────┼────────────┘
+                          ▼
+                     CORRELATION
+                          │
+                          ▼
+                    VISUALIZATION
+                          │
+                          ▼
+                   SOC ANALYST
+                          │
+                          ▼
+                    INVESTIGATION
+```
+

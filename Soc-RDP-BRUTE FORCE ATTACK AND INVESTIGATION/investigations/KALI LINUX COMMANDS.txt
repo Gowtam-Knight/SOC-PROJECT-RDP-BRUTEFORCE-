@@ -1,0 +1,100 @@
+## Kali Linux — Attack & Testing Commands
+
+These commands were executed from the Kali Linux testing machine against the Windows lab endpoint.
+
+> **Lab environment:** Windows endpoint `192.168.93.142`
+
+### 1. Check RDP Availability
+
+```bash
+nmap -p 3389 192.168.93.142
+```
+
+### 2. Check RDP Service Version
+
+```bash
+nmap -sV -p 3389 192.168.93.142
+```
+
+### 3. Test RDP Port Connectivity
+
+```bash
+nc -zv 192.168.93.142 3389
+```
+
+### 4. Connect to Windows Using RDP
+
+```bash
+xfreerdp /v:192.168.80.128 /u:soc-project /cert:ignore
+```
+
+### 5. RDP Authentication Test with Hydra
+
+For the isolated lab account created specifically for testing:
+
+```bash
+hydra -l soc -P passwords.txt rdp://192.168.93.142
+```
+
+### 6. Hydra with a Small Lab Password List
+
+```bash
+hydra -l soc -P ./passwords.txt rdp://192.168.93.142
+```
+
+### 7. Monitor RDP While Testing
+
+In another Kali terminal:
+
+```bash
+watch -n 1 "nc -zv 192.168.93.142 3389"
+```
+
+### 8. Verify RDP Service with Nmap
+
+```bash
+nmap -Pn -p 3389 --script rdp-enum-encryption 192.168.93.142
+```
+
+### 9. Capture RDP Traffic
+
+```bash
+sudo tcpdump -i eth0 host 192.168.93.142 and port 3389
+```
+
+---
+
+## Attack → Detection Workflow
+
+```text
+Kali Linux
+    │
+    │ RDP Connection
+    ▼
+Windows Endpoint
+    │
+    │ Failed Authentication
+    ▼
+Windows Event ID 4625
+    │
+    ▼
+Splunk Universal Forwarder
+    │
+    ▼
+Splunk SIEM
+    │
+    ▼
+RDP Brute-Force Detection
+    │
+    ▼
+SOC Dashboard
+```
+
+### Tools Used
+
+* Nmap — RDP service discovery
+* Netcat — Port connectivity testing
+* Hydra — Controlled RDP authentication testing
+* xfreerdp — RDP connection testing
+* tcpdump — Network traffic observation
+* Splunk — Detection and investigation
